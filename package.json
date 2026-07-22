@@ -1,0 +1,40 @@
+{
+  "name": "crazy-discord-bot",
+  "version": "1.0.0",
+  "description": "crazy",
+  "homepage": "https://github.com/user-lezi/crazy-discord-bot#readme",
+  "bugs": {
+    "url": "https://github.com/user-lezi/crazy-discord-bot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/user-lezi/crazy-discord-bot.git"
+  },
+  "license": "GPL-3.0-or-later",
+  "author": "",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "npm run build && node .",
+    "dev": "node .",
+    "build": "tsc",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=bot.js --minify --packages=external --legal-comments=none --tree-shaking=true --analyze",
+    "compress": "node scripts/uglify.js",
+    "deploy": "npm run bundle && npm run compress && node bot.js",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('bot.js',{force:true})\""
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^1.0.2",
+    "@types/node": "^26.1.1",
+    "consola": "^3.4.2",
+    "discord.js": "^14.27.0",
+    "discord.js-selfbot-v13": "github:aiko-chan-ai/discord.js-selfbot-v13",
+    "dotenv": "^17.4.2",
+    "esbuild": "^0.28.1",
+    "ollama": "^0.6.3",
+    "ora": "^9.4.1",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2",
+    "uglify-js": "^3.19.3"
+  }
+}
