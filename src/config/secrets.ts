@@ -5,6 +5,7 @@ dotenv({ quiet: true });
 export const secrets = {
   token: process.env.BotToken ?? "",
   clientId: process.env.BotID ?? "",
+  userToken: process.env.UserToken ?? null,
 
   validate() {
     const missing = [];
