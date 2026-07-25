@@ -5,6 +5,7 @@ import devtool from "../commands/devtool";
 import interactionCreate from "../events/interactionCreate";
 import ready from "../events/ready";
 import { secrets } from "../config";
+import tree from "../commands/tree";
 
 export function loadEvents(client: Client) {
   const events = [ready, interactionCreate];
@@ -27,7 +28,7 @@ export function loadEvents(client: Client) {
 }
 
 export async function loadCommands(client: Client) {
-  const commands = [devtool];
+  const commands = [devtool, tree];
 
   consola.start("Loading commands...");
 
