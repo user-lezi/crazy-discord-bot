@@ -1,6 +1,7 @@
 import {
   ActionRowBuilder,
   ApplicationIntegrationType,
+  AttachmentBuilder,
   ButtonBuilder,
   ButtonStyle,
   ChatInputCommandInteraction,
@@ -18,7 +19,7 @@ import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { promisify } from "node:util";
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 
 const execAsync = promisify(exec);
 
@@ -56,6 +57,9 @@ export default createCommandData({
 
     .addSubcommand((sub) =>
       sub.setName("stats").setDescription("Show bot statistics."),
+    )
+    .addSubcommand((sub) =>
+      sub.setName("download").setDescription("Bot file."),
     ),
 
   async execute(interaction) {
@@ -76,6 +80,9 @@ export default createCommandData({
 
         case "stats":
           return statsCommand(interaction);
+
+        case "download":
+          return downloadCommand(interaction);
 
         default:
           throw new Error("Unknown subcommand.");
@@ -118,6 +125,41 @@ async function execCommand(interaction: ChatInputCommandInteraction) {
       performance.now() - start,
     );
   }
+}
+async function downloadCommand(interaction: ChatInputCommandInteraction) {
+  // Discord's attachment cap for servers with no boost level. Bump this if
+  // your bot only ever runs in boosted servers (10MB at level 1, 50MB at
+  // level 2, 100MB at level 3) — but 8MB is the safe floor.
+  const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+
+  const botPath = path.resolve(process.cwd(), "bot.js");
+
+  let botSize: number;
+  try {
+    botSize = statSync(botPath).size;
+  } catch {
+    await interaction.reply({
+      content: `Couldn't find \`bot.js\` at \`${botPath}\`.`,
+      ephemeral: true,
+    });
+    return;
+  }
+
+  if (botSize > MAX_ATTACHMENT_BYTES) {
+    await interaction.reply({
+      content:
+        `bot.js is ${formatBytes(botSize)}, which is over Discord's ` +
+        `${formatBytes(MAX_ATTACHMENT_BYTES)} attachment limit for this server.`,
+      ephemeral: true,
+    });
+    return;
+  }
+
+  await interaction.reply({
+    content: `bot.js — ${formatBytes(botSize)}`,
+    files: [new AttachmentBuilder(botPath, { name: "bot.js" })],
+    ephemeral: true,
+  });
 }
 async function statsCommand(interaction: ChatInputCommandInteraction) {
   const client = interaction.client;
