@@ -68,7 +68,7 @@ export default createCommandData({
             )
             .setRequired(false)
             .setMinValue(1)
-            .setMaxValue(10),
+            .setMaxValue(50),
         )
         .addAttachmentOption((opt) =>
           opt
