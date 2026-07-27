@@ -4,6 +4,7 @@ import consola from "consola";
 import devtool from "../commands/devtool";
 import image from "../commands/image";
 import interactionCreate from "../events/interactionCreate";
+import raw from "../commands/raw";
 import ready from "../events/ready";
 import { secrets } from "../config";
 import tree from "../commands/tree";
@@ -29,7 +30,7 @@ export function loadEvents(client: Client) {
 }
 
 export async function loadCommands(client: Client) {
-  const commands = [devtool, tree, image];
+  const commands = [devtool, tree, image, raw];
 
   consola.start("Loading commands...");
 
