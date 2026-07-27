@@ -10,16 +10,17 @@ import {
 } from "discord.js";
 import { CommandType, createCommandData } from "../handlers/commands";
 import { constants, users } from "../config";
+import { createWriteStream, readFileSync, statSync, unlinkSync } from "node:fs";
 import { formatBytes, formatTime } from "../util/formatters";
 
 import { ReadyMadeReplies } from "../util/interactionReply";
+import { ZipArchive } from "archiver";
 import { exec } from "node:child_process";
 import { inspect } from "node:util";
 import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { promisify } from "node:util";
-import { readFileSync, statSync } from "node:fs";
 
 const execAsync = promisify(exec);
 
@@ -126,40 +127,92 @@ async function execCommand(interaction: ChatInputCommandInteraction) {
     );
   }
 }
+
 async function downloadCommand(interaction: ChatInputCommandInteraction) {
   // Discord's attachment cap for servers with no boost level. Bump this if
   // your bot only ever runs in boosted servers (10MB at level 1, 50MB at
   // level 2, 100MB at level 3) — but 8MB is the safe floor.
   const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
 
-  const botPath = path.resolve(process.cwd(), "bot.js");
+  const entries = [
+    "bot.js",
+    "scripts",
+    "package.json",
+    "README.md",
+    ".env.example",
+    "LICENSE",
+  ];
 
-  let botSize: number;
-  try {
-    botSize = statSync(botPath).size;
-  } catch {
-    await interaction.reply({
-      content: `Couldn't find \`bot.js\` at \`${botPath}\`.`,
-      ephemeral: true,
-    });
-    return;
+  // Make sure every file exists
+
+  for (const entry of entries) {
+    const filePath = path.resolve(process.cwd(), entry);
+
+    try {
+      statSync(filePath);
+    } catch {
+      await interaction.reply({
+        content: `Couldn't find \`${entry}\`.`,
+        ephemeral: true,
+      });
+      return;
+    }
   }
 
-  if (botSize > MAX_ATTACHMENT_BYTES) {
+  const zipPath = path.join(process.cwd(), "bot.zip");
+
+  // Create zip
+  await new Promise<void>((resolve, reject) => {
+    const output = createWriteStream(zipPath);
+    const archive = new ZipArchive({
+      zlib: { level: 9 },
+    });
+
+    output.on("close", resolve);
+    archive.on("error", reject);
+
+    archive.pipe(output);
+
+    for (const entry of entries) {
+      const fullPath = path.resolve(process.cwd(), entry);
+      const stat = statSync(fullPath);
+
+      if (stat.isDirectory()) {
+        archive.directory(fullPath, entry);
+      } else {
+        archive.file(fullPath, { name: entry });
+      }
+    }
+
+    archive.finalize();
+  });
+
+  const zipSize = statSync(zipPath).size;
+
+  if (zipSize > MAX_ATTACHMENT_BYTES) {
+    unlinkSync(zipPath);
+
     await interaction.reply({
       content:
-        `bot.js is ${formatBytes(botSize)}, which is over Discord's ` +
-        `${formatBytes(MAX_ATTACHMENT_BYTES)} attachment limit for this server.`,
+        `The ZIP is ${formatBytes(zipSize)}, which exceeds Discord's ` +
+        `${formatBytes(MAX_ATTACHMENT_BYTES)} attachment limit.`,
       ephemeral: true,
     });
     return;
   }
 
   await interaction.reply({
-    content: `bot.js — ${formatBytes(botSize)}`,
-    files: [new AttachmentBuilder(botPath, { name: "bot.js" })],
+    content: `Project ZIP — ${formatBytes(zipSize)}`,
+    files: [
+      new AttachmentBuilder(zipPath, {
+        name: "bot.zip",
+      }),
+    ],
     ephemeral: true,
   });
+
+  // Clean up
+  unlinkSync(zipPath);
 }
 async function statsCommand(interaction: ChatInputCommandInteraction) {
   const client = interaction.client;
