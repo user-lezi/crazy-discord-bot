@@ -9,6 +9,11 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { CommandType, createCommandData } from "../handlers/commands";
+import {
+  DisplayNameEffects,
+  DisplayNameFonts,
+  applyNameStyle,
+} from "../functions/setBotDisplayNameStyle";
 import { constants, users } from "../config";
 import { createWriteStream, readFileSync, statSync, unlinkSync } from "node:fs";
 import { formatBytes, formatTime } from "../util/formatters";
@@ -60,6 +65,40 @@ export default createCommandData({
       sub.setName("stats").setDescription("Show bot statistics."),
     )
     .addSubcommand((sub) =>
+      sub
+        .setName("display-name")
+        .setDescription("Apply display types")
+        .addIntegerOption((opt) =>
+          opt
+            .setName("font")
+            .setDescription("Font")
+            .addChoices(
+              Object.keys(DisplayNameFonts)
+                .map((v) => ({
+                  name: v,
+                  value: DisplayNameFonts[v as keyof typeof DisplayNameFonts],
+                }))
+                .filter((v) => typeof v.value == "number"),
+            )
+            .setRequired(true),
+        )
+        .addIntegerOption((opt) =>
+          opt
+            .setName("effect")
+            .setDescription("effect")
+            .addChoices(
+              Object.keys(DisplayNameEffects)
+                .map((v) => ({
+                  name: v,
+                  value:
+                    DisplayNameEffects[v as keyof typeof DisplayNameEffects],
+                }))
+                .filter((v) => typeof v.value == "number"),
+            )
+            .setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
       sub.setName("download").setDescription("Bot file."),
     ),
 
@@ -85,6 +124,9 @@ export default createCommandData({
         case "download":
           return downloadCommand(interaction);
 
+        case "display-name":
+          return displayNameCommand(interaction);
+
         default:
           throw new Error("Unknown subcommand.");
       }
@@ -97,6 +139,29 @@ export default createCommandData({
     }
   },
 });
+
+async function displayNameCommand(interaction: ChatInputCommandInteraction) {
+  interaction.deferReply();
+  const font = interaction.options.getInteger("font", true) as DisplayNameFonts;
+  const effect = interaction.options.getInteger(
+    "effect",
+    true,
+  ) as DisplayNameEffects;
+  let guildIds = Array.from(interaction.client.guilds.cache.keys());
+  for (const guildId of guildIds) {
+    try {
+      await applyNameStyle(
+        interaction.client,
+        guildId,
+        font,
+        effect,
+        [0xff0000, 0xff00ff],
+      );
+    } catch {}
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  interaction.editReply("cool");
+}
 async function execCommand(interaction: ChatInputCommandInteraction) {
   const command = interaction.options.getString("command", true);
 
