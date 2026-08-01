@@ -8,6 +8,7 @@ const result = UglifyJS.minify(input, {
     passes: 3,
     drop_console: false,
     unsafe: true,
+    toplevel: true,
   },
   mangle: {
     toplevel: true,
