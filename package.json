@@ -18,9 +18,9 @@
     "test": "npm run build && node .",
     "dev": "node .",
     "build": "tsc",
-    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=bot.js --minify --packages=external --legal-comments=none --tree-shaking=true --analyze",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=bot.js --minify --packages=external --legal-comments=none --tree-shaking=true --analyze && npm run compress",
     "compress": "node scripts/uglify.js",
-    "deploy": "npm run bundle && npm run compress && node bot.js",
+    "deploy": "npm run bundle && node bot.js",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('bot.js',{force:true})\"",
     "bot": "npm run clean && npm run build && npm run deploy"
   },
