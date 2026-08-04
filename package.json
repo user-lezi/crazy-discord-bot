@@ -13,16 +13,12 @@
   "license": "GPL-3.0-or-later",
   "author": "",
   "type": "commonjs",
-  "main": "dist/index.js",
+  "main": "bot.js",
   "scripts": {
-    "test": "npm run build && node .",
-    "dev": "node .",
-    "build": "tsc",
-    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=bot.js --minify --packages=external --legal-comments=none --tree-shaking=true --analyze && npm run compress",
+    "build": "npm run clean && esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=bot.js --minify --packages=external --legal-comments=none --tree-shaking=true --analyze && npm run compress",
     "compress": "node scripts/uglify.js",
-    "deploy": "npm run bundle && node bot.js",
-    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('bot.js',{force:true})\"",
-    "bot": "npm run clean && npm run build && npm run deploy"
+    "bot": "npm run build && node .",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('bot.js',{force:true})\""
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.2",
