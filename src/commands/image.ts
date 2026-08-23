@@ -3,6 +3,7 @@ import { CommandType, createCommandData } from "../handlers/commands";
 import { ReadyMadeReplies } from "../util/interactionReply";
 import { SlashCommandBuilder } from "discord.js";
 import { guildIconImageCommand } from "./__internals__/image/guildIconCommand";
+import { morphImageCommand } from "./__internals__/image/morphCommand";
 
 export default createCommandData({
   type: CommandType.ChatInput,
@@ -69,12 +70,22 @@ export default createCommandData({
             .setDescription("Recreate this image instead of the guild icon")
             .setRequired(false),
         ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("morph")
+        .setDescription("Morphs users")
+        .addUserOption((opt) => opt.setName("from").setDescription("User 1"))
+        .addUserOption((opt) => opt.setName("to").setDescription("User 2"))
+        .addBooleanOption((opt) => opt.setName("loop").setDescription("Loop the GIF (default: no)")),
     ),
   async execute(interaction) {
     try {
       switch (interaction.options.getSubcommand()) {
         case "guild_icon":
           return guildIconImageCommand(interaction);
+        case "morph":
+          return morphImageCommand(interaction);
         default:
           throw new Error("Unknown subcommand.");
       }

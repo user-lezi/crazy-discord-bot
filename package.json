@@ -31,6 +31,7 @@
     "discord.js-selfbot-v13": "github:aiko-chan-ai/discord.js-selfbot-v13",
     "dotenv": "^17.4.2",
     "esbuild": "^0.28.1",
+    "gifenc": "^1.0.3",
     "ollama": "^0.6.3",
     "ora": "^9.4.1",
     "prettier": "^3.9.6",
