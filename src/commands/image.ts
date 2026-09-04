@@ -77,7 +77,26 @@ export default createCommandData({
         .setDescription("Morphs users")
         .addUserOption((opt) => opt.setName("from").setDescription("User 1"))
         .addUserOption((opt) => opt.setName("to").setDescription("User 2"))
-        .addBooleanOption((opt) => opt.setName("loop").setDescription("Loop the GIF (default: no)")),
+        .addBooleanOption((opt) =>
+          opt.setName("loop").setDescription("Loop the GIF (default: no)"),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName("sort_by")
+            .setDescription(
+              "Pixel sort key that drives the morph pattern (default: Luminance)",
+            )
+            .setRequired(false)
+            .addChoices(
+              { name: "Luminance (default)", value: "luminance" },
+              { name: "Hue", value: "hue" },
+              { name: "Saturation", value: "saturation" },
+              { name: "Brightness", value: "brightness" },
+              { name: "Red channel", value: "red" },
+              { name: "Green channel", value: "green" },
+              { name: "Blue channel", value: "blue" },
+            ),
+        ),
     ),
   async execute(interaction) {
     try {
