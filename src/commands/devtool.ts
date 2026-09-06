@@ -14,7 +14,7 @@ import {
   DisplayNameFonts,
   applyNameStyle,
 } from "../functions/setBotDisplayNameStyle";
-import { constants, users } from "../config";
+import { Users, constants } from "../config";
 import { createWriteStream, readFileSync, statSync, unlinkSync } from "node:fs";
 import { formatBytes, formatTime } from "../util/formatters";
 
@@ -103,7 +103,7 @@ export default createCommandData({
     ),
 
   async execute(interaction) {
-    if (!users.isDeveloper(interaction.user.id)) {
+    if (!Users.isDev(interaction.user.id)) {
       return interaction.reply({
         content: "❌ You are not allowed to use this command.",
         ephemeral: true,
