@@ -1,14 +1,13 @@
-import consola from "consola";
-import { createEventData } from "../handlers/events";
+import { createEventData } from "../create";
 
 export default createEventData({
   name: "clientReady",
   once: true,
   execute(client) {
-    consola.box(
+    console.log(
       `Logged in as ${client.user.tag}\n` +
         `${client.guilds.cache.size} guilds\n` +
-        `${client.commands.size} commands`,
+        `${client.commandManager.size} commands`,
     );
   },
 });

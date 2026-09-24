@@ -1,6 +1,7 @@
 import {
   ChatInputCommandInteraction,
   ContainerBuilder,
+  ContextMenuCommandInteraction,
   InteractionEditReplyOptions,
   Message,
   MessageComponentInteraction,
@@ -9,14 +10,14 @@ import {
   User,
 } from "discord.js";
 
-export type AnyInteraction =
-  ChatInputCommandInteraction | MessageComponentInteraction;
+export type AnyRepliableInteraction =
+  ChatInputCommandInteraction | MessageComponentInteraction | ContextMenuCommandInteraction;
 
 /**
  * Handles routing interaction responses seamlessly across initial replies,
  * deferred edits, subsequent thread follow-ups, and optional self-deletion lifecycles.
  */
-export async function interactionReply<I extends AnyInteraction>(
+export async function interactionReply<I extends AnyRepliableInteraction>(
   interaction: I,
   payload: Omit<MessagePayloadOption | InteractionEditReplyOptions, "flags"> & {
     flags?: MessageFlags;
@@ -64,7 +65,7 @@ export const ReadyMadeReplies = {
    * Used when a non-owner tries to click components/buttons on someone else's command session.
    */
   authorOnly: async (
-    i: AnyInteraction,
+    i: AnyRepliableInteraction,
     customMessage?: string,
     isFollowUp = false,
   ) => {
@@ -86,7 +87,7 @@ export const ReadyMadeReplies = {
    * Standard fallback catch for `try/catch` execution blocks when things unexpectedly break.
    */
   unknownError: async (
-    i: AnyInteraction,
+    i: AnyRepliableInteraction,
     errorContext?: any,
     isFollowUp = false,
   ) => {

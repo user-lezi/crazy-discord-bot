@@ -1,22 +1,18 @@
 import { Client, Collection, GatewayIntentBits } from "discord.js";
-import { loadCommands, loadEvents } from "./handlers";
 
-import { ClientEventData } from "./handlers/events";
-import { CommandData } from "./handlers/commands";
-import { Client as Selfbot } from "discord.js-selfbot-v13";
-import consola from "consola";
-import { initSelf } from "./self";
-import ora from "ora";
-import { secrets } from "./config";
-import { setupErrorHandler } from "./handlers/errorHandler";
+import { CommandManager } from "./managers/CommandManager";
+import { EventManager } from "./managers/EventManager";
+import { config } from "dotenv";
+import { setupErrorHandler } from "./events/error";
 
 declare module "discord.js" {
   interface Client {
-    commands: Collection<number, CommandData>;
-    events: Collection<string, ClientEventData<any>>;
-    self?: Selfbot<true>;
+    commandManager: CommandManager;
+    eventManager: EventManager;
   }
 }
+
+config({ quiet: true });
 
 const client = new Client({
   intents: [
@@ -27,43 +23,18 @@ const client = new Client({
   ],
 });
 
-client.commands = new Collection();
-client.events = new Collection();
-if (secrets.userToken) client.self = new Selfbot({});
+client.commandManager = new CommandManager(client);
+client.eventManager = new EventManager(client);
 
 setupErrorHandler(client);
 
 async function start() {
   try {
-    secrets.validate();
+    client.eventManager.load();
+    await client.commandManager.load();
 
-    const spinner = ora("Loading events...").start();
-    loadEvents(client);
-    spinner.succeed(`Loaded ${client.events.size} events`);
-
-    spinner.start("Loading commands...");
-    await loadCommands(client);
-    spinner.succeed(`Loaded ${client.commands.size} commands`);
-
-    if (!secrets.token) {
-      consola.fatal("BotToken is missing in the environment variables.");
-      process.exit(1);
-    }
-
-    spinner.start("Logging into Discord...");
-    await client.login(secrets.token);
-    spinner.succeed("Connected to Discord");
-
-    if (client.self && secrets.userToken) {
-      spinner.start("Initializing Discord User...");
-      await initSelf(client.self);
-      spinner.succeed("Discord User Ready");
-      spinner.start("Logging into Discord User...");
-      await client.self.login(secrets.userToken);
-      spinner.succeed("Connected to Discord User");
-    }
+    client.login(process.env.BotToken);
   } catch (error) {
-    consola.error(error);
     process.exit(1);
   }
 }
