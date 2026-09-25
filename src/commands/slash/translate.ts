@@ -68,6 +68,8 @@ export default CreateCommand({
     let to = ctx.interaction.options.getString("to") ?? undefined;
 
     let ephemeral = ctx.interaction.options.getBoolean("ephemeral") ?? false;
+
+    ctx.interaction.deferReply({ flags: ephemeral ? 64 | 32768 : 32768 });
     try {
       let result = await VgjrAPI.Translate(text, from, to);
       let translation = result.response;
@@ -91,7 +93,6 @@ export default CreateCommand({
               ),
             ),
         ],
-        flags: ephemeral ? 64 | 32768 : 32768,
       });
     } catch (error) {
       console.error(error);
