@@ -27,7 +27,7 @@ export default CreateCommand({
   async execute(ctx) {
     let { interaction } = ctx;
     try {
-      evalCommand(interaction as ChatInputCommandInteraction);
+      evalCommand(interaction);
     } catch (error) {
       return ReadyMadeReplies.unknownError(
         interaction,
@@ -130,7 +130,7 @@ async function paginate(
     if (button.user.id !== interaction.user.id) {
       return button.reply({
         content: "❌ This is not your eval.",
-        ephemeral: true,
+        flags: 64,
       });
     }
 

@@ -4,9 +4,11 @@ import {
 } from "../util/interactionReply";
 import {
   AutocompleteInteraction,
+  ChatInputCommandInteraction,
   Client,
   Collection,
   ContextMenuCommandBuilder,
+  ContextMenuCommandInteraction,
   MessageComponentInteraction,
   REST,
   Routes,
@@ -24,43 +26,58 @@ export interface ICommandMeta {
   [x: string]: any;
 }
 
-export type CommandRestricter =
+export type SlashCommandBuilderLike =
+  | SlashCommandBuilder
+  | SlashCommandOptionsOnlyBuilder
+  | SlashCommandSubcommandsOnlyBuilder;
+
+export type CommandBuilder =
+  SlashCommandBuilderLike | ContextMenuCommandBuilder;
+
+export type InteractionForBuilder<TBuilder extends CommandBuilder> =
+  TBuilder extends SlashCommandBuilderLike
+    ? ChatInputCommandInteraction
+    : TBuilder extends ContextMenuCommandBuilder
+      ? ContextMenuCommandInteraction
+      : never;
+
+export type CommandRestricter<
+  TBuilder extends CommandBuilder = CommandBuilder,
+> =
   | Snowflake
   | "developers"
   | ((
       this: Client,
-      interaction: Exclude<
-        AnyRepliableInteraction,
-        MessageComponentInteraction
-      >,
+      interaction: InteractionForBuilder<TBuilder>,
     ) => Promiseable<boolean>);
-export type ICommandExecutor = (
-  this: Client,
-  ctx: {
-    interaction: Exclude<AnyRepliableInteraction, MessageComponentInteraction>;
-    reply: typeof interactionReply;
-    command: ICommand;
-  },
-) => Promiseable<unknown>;
-export interface ICommand {
+
+export type ICommandExecutor<TBuilder extends CommandBuilder = CommandBuilder> =
+  (
+    this: Client,
+    ctx: {
+      interaction: InteractionForBuilder<TBuilder>;
+      reply: typeof interactionReply;
+      command: ICommand<TBuilder>;
+    },
+  ) => Promiseable<unknown>;
+
+export interface ICommand<TBuilder extends CommandBuilder = CommandBuilder> {
   data: {
-    builder:
-      | SlashCommandBuilder
-      | SlashCommandOptionsOnlyBuilder
-      | SlashCommandSubcommandsOnlyBuilder
-      | ContextMenuCommandBuilder;
-    restrictTo?: CommandRestricter[];
+    builder: TBuilder;
+    restrictTo?: CommandRestricter<TBuilder>[];
     meta?: ICommandMeta;
   };
 
-  execute: ICommandExecutor;
-  preexecute?: ICommandExecutor;
-  postexecute?: ICommandExecutor;
+  execute: ICommandExecutor<TBuilder>;
+  preexecute?: ICommandExecutor<TBuilder>;
+  postexecute?: ICommandExecutor<TBuilder>;
 
-  autocomplete?: (
-    this: Client,
-    interaction: AutocompleteInteraction,
-  ) => Promiseable<unknown>;
+  autocomplete?: TBuilder extends SlashCommandBuilderLike
+    ? (
+        this: Client,
+        interaction: AutocompleteInteraction,
+      ) => Promiseable<unknown>
+    : never;
 }
 
 export class CommandManager {
@@ -71,7 +88,7 @@ export class CommandManager {
     console.log("Loading commands...");
 
     for (const command of ClientCommands) {
-      this.commands.set(this.commands.size, command);
+      this.commands.set(this.commands.size, command as any);
     }
 
     console.log(

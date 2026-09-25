@@ -1,4 +1,5 @@
-import dev from "./commands/dev";
-import ping from "./commands/ping";
+import dev from "./slash/dev";
+import ping from "./slash/ping";
+import translate from "./slash/translate";
 
-export const ClientCommands = [ping, dev];
+export const ClientCommands = [ping, dev, translate];

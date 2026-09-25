@@ -1,5 +1,7 @@
-import { ICommand } from "../managers/CommandManager";
+import { CommandBuilder, ICommand } from "../managers/CommandManager";
 
-export function CreateCommand(data: ICommand): ICommand {
-  return data;
+export function CreateCommand<TBuilder extends CommandBuilder>(
+  command: ICommand<TBuilder>,
+): ICommand<TBuilder> {
+  return command;
 }
