@@ -1,5 +1,6 @@
 import { Client, Collection, GatewayIntentBits } from "discord.js";
 
+import { CacheManager } from "./managers/CacheManager";
 import { CommandManager } from "./managers/CommandManager";
 import { EventManager } from "./managers/EventManager";
 import { config } from "dotenv";
@@ -9,6 +10,7 @@ declare module "discord.js" {
   interface Client {
     commandManager: CommandManager;
     eventManager: EventManager;
+    cacheManager: CacheManager<unknown>;
   }
 }
 
@@ -25,6 +27,7 @@ const client = new Client({
 
 client.commandManager = new CommandManager(client);
 client.eventManager = new EventManager(client);
+client.cacheManager = new CacheManager();
 
 setupErrorHandler(client);
 

@@ -1,5 +1,5 @@
-import { CacheManager } from "../../managers/CacheManager";
-import { UserAgent } from ".";
+import { CacheManager } from "../../../managers/CacheManager";
+import { UserAgent } from "..";
 
 export interface IVgjrAPIResponse {
   "/tools/translate": {
@@ -73,5 +73,3 @@ export const VgjrAPI = {
     );
   },
 };
-
-

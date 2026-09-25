@@ -1,13 +1,8 @@
-import {
-  ContainerBuilder,
-  SlashCommandBuilder,
-  TextDisplayBuilder,
-} from "discord.js";
+import { ContainerBuilder, SlashCommandBuilder } from "discord.js";
 
 import { CreateCommand } from "../create";
-import { Languages } from "../../core/apis/constants";
+import { Languages } from "../../core/apis/vgjr/constants";
 import { VgjrAPI } from "../../core/apis/vgjr";
-import { pathToFileURL } from "node:url";
 
 function flagFor(nameOrCode: string): string {
   const match = Languages.find(
