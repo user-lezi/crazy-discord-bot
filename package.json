@@ -18,7 +18,7 @@
     "build": "npm run clean && esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=bot.js --minify --packages=external --legal-comments=none --tree-shaking=true --analyze && npm run compress",
     "compress": "node scripts/uglify.js",
     "bot": "npm run build && node .",
-    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('bot.js',{force:true})\""
+    "clean": "node -e \"require('fs').rmSync('bot.js',{force:true})\""
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.2",
