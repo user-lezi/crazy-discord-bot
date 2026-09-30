@@ -22,7 +22,7 @@ export default CreateCommand({
           .setDescription("Code to evaluate")
           .setRequired(true),
       ),
-    restrictTo: ["developer"],
+    restrictTo: ["developers"],
   },
   async execute(ctx) {
     let { interaction } = ctx;

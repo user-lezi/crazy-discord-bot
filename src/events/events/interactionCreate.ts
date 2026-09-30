@@ -29,19 +29,29 @@ export default createEventData({
       try {
         // check if restricted.
         if (command.data.restrictTo) {
-          if (
-            !command.data.restrictTo.some(async (el) => {
-              if (el == "developers") {
-                if (Users.findIndex((u) => u.id == interaction.user.id) > -1)
-                  return true;
-              } else if (typeof el == "string") {
-                if (el == interaction.user.id) return true;
-              } else if (typeof el == "function") {
-                return await el.bind(client)(interaction);
-              } else return false;
-            })
-          )
-            return;
+          const allowed = (
+            await Promise.all(
+              command.data.restrictTo.map(async (el) => {
+                if (el == "developers") {
+                  return Users.some(
+                    (u) =>
+                      String(typeof u === "string" ? u : u?.id) ===
+                        interaction.user.id && u.type == "developer",
+                  );
+                } else if (typeof el == "string") {
+                  return el == interaction.user.id;
+                } else if (typeof el == "function") {
+                  return await el.bind(client)(interaction);
+                }
+                return false;
+              }),
+            )
+          ).some(Boolean);
+
+          if (!allowed)
+            return await interactionReply(interaction, {
+              content: "You are not allowed.",
+            });
         }
 
         if (command.preexecute)
