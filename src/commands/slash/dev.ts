@@ -39,13 +39,12 @@ export default CreateCommand({
 });
 async function evalCommand(interaction: ChatInputCommandInteraction) {
   const code = interaction.options.getString("code", true);
+  await interaction.deferReply();
 
   const start = performance.now();
 
   try {
-    const result = await interaction.client["_eval"](
-      `(async () => { ${code} })()`,
-    );
+    const result = await interaction.client["_eval"](code);
 
     const time = performance.now() - start;
 
@@ -120,7 +119,7 @@ async function paginate(
     },
   });
 
-  const message = await interaction.reply(createPage());
+  const message = await interaction.editReply(createPage());
 
   const collector = message.createMessageComponentCollector({
     time: 300_000,

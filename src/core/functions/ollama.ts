@@ -9,23 +9,79 @@ import ollama, {
   GenerateRequest,
   GenerateResponse,
   ListResponse,
+  Message,
   Ollama,
   ShowResponse,
 } from "ollama";
 
+const DEFAULT_MODEL = process.env.OllamaDefaultModel || "gpt-oss:120b-cloud";
+
 const cloudOllama = new Ollama({
   host: "https://ollama.com",
-  headers: { Authorization: `Bearer ${process.env.OLLAMA_API_KEY}` },
+  headers: { Authorization: `Bearer ${process.env.OllamaAPIKey}` },
 });
 
 export class OllamaService {
+  /** Default fallback model for quick methods */
+  static defaultModel: string = DEFAULT_MODEL;
   /**
    * Retrieves the appropriate client instance based on local/cloud preference.
    */
   static getClient(local: boolean = true): Ollama {
     return local ? ollama : cloudOllama;
   }
+  /**
+   * Fast, lightweight shortcut methods with intelligent fallbacks.
+   */
+  static quick = {
+    /**
+     * Quick chat helper taking simple string prompt or message array.
+     */
+    chat: async (
+      messages: string | Message[],
+      model: string = OllamaService.defaultModel,
+      local: boolean = true,
+      options?: Omit<ChatRequest, "model" | "messages" | "stream">,
+    ): Promise<ChatResponse> => {
+      const formattedMessages: Message[] =
+        typeof messages === "string"
+          ? [{ role: "user", content: messages }]
+          : messages;
 
+      return await OllamaService.chat(
+        {
+          model,
+          messages: formattedMessages,
+          ...options,
+        },
+        local,
+      );
+    },
+
+    /**
+     * Quick structured chat helper returning validated JSON with fallback defaults.
+     */
+    chatStructured: async <T extends z.ZodType>(
+      messages: string | Message[],
+      schema: T,
+      model: string = OllamaService.defaultModel,
+      local: boolean = true,
+    ): Promise<z.infer<T>> => {
+      const formattedMessages: Message[] =
+        typeof messages === "string"
+          ? [{ role: "user", content: messages }]
+          : messages;
+
+      return await OllamaService.chatStructured(
+        {
+          model,
+          messages: formattedMessages,
+          schema,
+        },
+        local,
+      );
+    },
+  };
   /**
    * Non-streaming chat completion.
    */
@@ -42,7 +98,7 @@ export class OllamaService {
    * Automatically converts the Zod schema to JSON schema, passes it to Ollama,
    * and parses/validates the returned response object into strong TypeScript types.
    */
-  static async chatStructured<T extends z.ZodTypeAny>(
+  static async chatStructured<T extends z.ZodType>(
     request: Omit<ChatRequest, "stream" | "format"> & {
       schema: T;
     },

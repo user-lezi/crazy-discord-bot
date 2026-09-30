@@ -12,7 +12,7 @@ declare module "discord.js" {
     commandManager: CommandManager;
     eventManager: EventManager;
     cacheManager: CacheManager<unknown>;
-    ollama: OllamaService;
+    ollama: typeof OllamaService;
   }
 }
 
