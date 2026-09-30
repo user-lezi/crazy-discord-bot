@@ -3,6 +3,7 @@ import { Client, Collection, GatewayIntentBits } from "discord.js";
 import { CacheManager } from "./managers/CacheManager";
 import { CommandManager } from "./managers/CommandManager";
 import { EventManager } from "./managers/EventManager";
+import { OllamaService } from "./core/functions/ollama";
 import { config } from "dotenv";
 import { setupErrorHandler } from "./events/error";
 
@@ -11,6 +12,7 @@ declare module "discord.js" {
     commandManager: CommandManager;
     eventManager: EventManager;
     cacheManager: CacheManager<unknown>;
+    ollama: OllamaService;
   }
 }
 
@@ -28,6 +30,7 @@ const client = new Client({
 client.commandManager = new CommandManager(client);
 client.eventManager = new EventManager(client);
 client.cacheManager = new CacheManager();
+client.ollama = OllamaService;
 
 setupErrorHandler(client);
 
