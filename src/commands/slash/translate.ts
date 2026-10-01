@@ -35,6 +35,7 @@ export default CreateCommand({
       )
       .setContexts(0, 1, 2)
       .setIntegrationTypes(0, 1),
+      cooldown: 10_000,
   },
 
   async autocomplete(interaction) {

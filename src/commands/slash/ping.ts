@@ -8,6 +8,7 @@ export default CreateCommand({
       .setDescription("pong!")
       .setContexts(0, 1, 2)
       .setIntegrationTypes(1),
+    cooldown: 5000,
   },
   async execute(ctx) {
     let ping = this.ws.ping;

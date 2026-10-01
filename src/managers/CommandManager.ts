@@ -51,6 +51,16 @@ export type CommandRestricter<
       interaction: InteractionForBuilder<TBuilder>,
     ) => Promiseable<boolean>);
 
+export type CommandCooldownBypasser<
+  TBuilder extends CommandBuilder = CommandBuilder,
+> =
+  | Snowflake
+  | "developers"
+  | ((
+      this: Client,
+      interaction: InteractionForBuilder<TBuilder>,
+    ) => Promiseable<boolean>);
+
 export type ICommandExecutor<TBuilder extends CommandBuilder = CommandBuilder> =
   (
     this: Client,
@@ -64,6 +74,11 @@ export type ICommandExecutor<TBuilder extends CommandBuilder = CommandBuilder> =
 export interface ICommand<TBuilder extends CommandBuilder = CommandBuilder> {
   data: {
     builder: TBuilder;
+    /** Cooldown duration in milliseconds. */
+    cooldown?: number;
+    /** Guild-wide cooldown duration in milliseconds. */
+    guildCooldown?: number;
+    bypassCooldown?: CommandCooldownBypasser<TBuilder>[];
     restrictTo?: CommandRestricter<TBuilder>[];
     meta?: ICommandMeta;
   };
@@ -71,6 +86,17 @@ export interface ICommand<TBuilder extends CommandBuilder = CommandBuilder> {
   execute: ICommandExecutor<TBuilder>;
   preexecute?: ICommandExecutor<TBuilder>;
   postexecute?: ICommandExecutor<TBuilder>;
+
+  oncooldown?: (
+    this: Client,
+    ctx: {
+      interaction: InteractionForBuilder<TBuilder>;
+      reply: typeof interactionReply;
+      command: ICommand<TBuilder>;
+      /** Remaining cooldown duration in seconds. */
+      remaining: number;
+    },
+  ) => Promiseable<boolean | void>;
 
   autocomplete?: TBuilder extends SlashCommandBuilderLike
     ? (

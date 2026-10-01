@@ -54,6 +54,99 @@ export default createEventData({
             });
         }
 
+        // check if on cooldown.
+        if (
+          (command.data.cooldown && command.data.cooldown > 0) ||
+          (command.data.guildCooldown && command.data.guildCooldown > 0)
+        ) {
+          let bypassCooldown = false;
+          if (command.data.bypassCooldown) {
+            bypassCooldown = (
+              await Promise.all(
+                command.data.bypassCooldown.map(async (el) => {
+                  if (el == "developers") {
+                    return Users.some(
+                      (u) =>
+                        String(typeof u === "string" ? u : u?.id) ===
+                          interaction.user.id && u.type == "developer",
+                    );
+                  } else if (typeof el == "string") {
+                    return el == interaction.user.id;
+                  } else if (typeof el == "function") {
+                    return await el.bind(client)(interaction);
+                  }
+                  return false;
+                }),
+              )
+            ).some(Boolean);
+          }
+
+          if (!bypassCooldown) {
+            const commandName = command.data.builder.name;
+            const cooldowns: Array<{ key: string; duration: number }> = [];
+
+            if (command.data.cooldown && command.data.cooldown > 0) {
+              cooldowns.push({
+                key: `${interaction.user.id}-${commandName}`,
+                duration: command.data.cooldown,
+              });
+            }
+
+            if (command.data.guildCooldown && command.data.guildCooldown > 0) {
+              if (!interaction.guildId) {
+                return await interactionReply(interaction, {
+                  content: "This command can only be used in a server.",
+                });
+              }
+
+              cooldowns.push({
+                key: `guild-${interaction.guildId}-${commandName}`,
+                duration: command.data.guildCooldown,
+              });
+            }
+
+            for (const { key } of cooldowns) {
+              const cooldownEntry = client.cooldownManager.get(key);
+              if (!cooldownEntry) continue;
+
+              const remaining = Math.max(
+                0,
+                Math.ceil((cooldownEntry.expiresAt - Date.now()) / 1000),
+              );
+              if (remaining <= 0) continue;
+
+              let stillOnCooldown = true;
+              if (command.oncooldown) {
+                const results = await command.oncooldown.bind(client)({
+                  interaction,
+                  reply: interactionReply,
+                  command,
+                  remaining,
+                });
+
+                if (typeof results === "boolean") {
+                  stillOnCooldown = results;
+                } else return;
+              }
+
+              if (stillOnCooldown)
+                return await interactionReply(interaction, {
+                  content: `This command is on cooldown. Please wait ${remaining} seconds.`,
+                });
+            }
+
+            const now = Date.now();
+            for (const { key, duration } of cooldowns) {
+              client.cooldownManager.set(key, {
+                remaining: duration,
+                expiresAt: now + duration,
+                userId: interaction.user.id,
+                commandName,
+              });
+            }
+          }
+        }
+
         if (command.preexecute)
           await command.preexecute.bind(this)({
             command,

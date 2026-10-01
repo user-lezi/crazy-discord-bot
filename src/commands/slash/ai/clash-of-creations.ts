@@ -9,6 +9,7 @@ export default CreateCommand({
       .setDescription("Compete against other user's creations.")
       .setContexts(0)
       .setIntegrationTypes(0),
+    guildCooldown: 30_000,
   },
   async execute(ctx) {
     await createGameInstance(ctx.interaction.client, ctx.interaction);

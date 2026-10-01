@@ -12,6 +12,7 @@ declare module "discord.js" {
     commandManager: CommandManager;
     eventManager: EventManager;
     cacheManager: CacheManager<unknown>;
+    cooldownManager: CacheManager<{ remaining: number; expiresAt: number, userId: string, commandName: string }>;
     ollama: typeof OllamaService;
   }
 }
@@ -30,6 +31,7 @@ const client = new Client({
 client.commandManager = new CommandManager(client);
 client.eventManager = new EventManager(client);
 client.cacheManager = new CacheManager();
+client.cooldownManager = new CacheManager();
 client.ollama = OllamaService;
 
 setupErrorHandler(client);
