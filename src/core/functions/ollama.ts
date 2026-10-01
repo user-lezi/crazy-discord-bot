@@ -14,6 +14,8 @@ import ollama, {
   ShowResponse,
 } from "ollama";
 
+import { Embeddings } from "./embeddings";
+
 const DEFAULT_MODEL = process.env.OllamaDefaultModel || "gpt-oss:120b-cloud";
 
 const cloudOllama = new Ollama({
@@ -24,6 +26,7 @@ const cloudOllama = new Ollama({
 export class OllamaService {
   /** Default fallback model for quick methods */
   static defaultModel: string = DEFAULT_MODEL;
+  static embeddings = new Embeddings(this);
   /**
    * Retrieves the appropriate client instance based on local/cloud preference.
    */
