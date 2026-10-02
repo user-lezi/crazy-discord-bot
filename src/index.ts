@@ -1,4 +1,5 @@
 import { Client, Collection, GatewayIntentBits } from "discord.js";
+import type { Image } from "@napi-rs/canvas";
 
 import { CacheManager } from "./managers/CacheManager";
 import { CommandManager } from "./managers/CommandManager";
@@ -13,6 +14,7 @@ declare module "discord.js" {
     eventManager: EventManager;
     cacheManager: CacheManager<unknown>;
     cooldownManager: CacheManager<{ remaining: number; expiresAt: number, userId: string, commandName: string }>;
+    imageCacheManager: CacheManager<Image>;
     ollama: typeof OllamaService;
   }
 }
@@ -32,6 +34,7 @@ client.commandManager = new CommandManager(client);
 client.eventManager = new EventManager(client);
 client.cacheManager = new CacheManager();
 client.cooldownManager = new CacheManager();
+client.imageCacheManager = new CacheManager();
 client.ollama = OllamaService;
 
 setupErrorHandler(client);
