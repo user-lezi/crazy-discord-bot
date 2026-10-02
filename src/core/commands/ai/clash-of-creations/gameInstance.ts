@@ -6,6 +6,7 @@ import {
   ChatInputCommandInteraction,
   Client,
   ComponentType,
+  AttachmentBuilder,
   EmbedBuilder,
   Interaction,
   InteractionCollector,
@@ -29,6 +30,7 @@ import {
 import creationData from "../../../../../assets/data/coc-random-creations.json";
 import { randomUUID } from "node:crypto";
 import { shuffle } from "../../../../util/random";
+import { createPlayoffCanvas } from "./canvas";
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
@@ -663,6 +665,8 @@ async function runPlayoffs(
         },
       });
       let result = await battleCreations(players[0], players[1]);
+      result.round = round;
+      result.match = index / 2 + 1;
       game.results.push(result);
       client.cacheManager.set(gameCacheKey(game.serverId), game);
       await lobbyMessage.reply({
@@ -682,6 +686,9 @@ async function runPlayoffs(
           },
         });
         result = await battleCreations(players[0], players[1], true);
+        result.round = round;
+        result.match = index / 2 + 1;
+        result.rematch = true;
         game.results.push(result);
         client.cacheManager.set(gameCacheKey(game.serverId), game);
         await lobbyMessage.reply({
@@ -723,24 +730,40 @@ async function runPlayoffs(
     winnerDialogue = `${winner.creation} celebrates: "I made it through every clash and I'm still standing!"`;
   }
 
+  let bracketImage: Buffer | undefined;
+  try {
+    bracketImage = createPlayoffCanvas(game.results, winner);
+  } catch (error) {
+    console.error("Failed to render the Clash of Creations playoff bracket.", error);
+  }
+
+  const championEmbed = new EmbedBuilder()
+    .setColor(0xf1c40f)
+    .setTitle("🏆🏆🏆 THE CHAMPION 🏆🏆🏆")
+    .setDescription(
+      [
+        `# ${winner.name.toUpperCase()} WINS!`,
+        "",
+        `${winner.ai?.emojis.join(" ") ?? "🏆"} **${winner.creation}**`,
+        "",
+        `> ${winnerDialogue}`,
+        "",
+        "This creation stands last and takes the Clash of Creations crown!",
+      ].join("\n"),
+    )
+    .setFooter({ text: "CLASH OF CREATIONS CHAMPION" });
+
+  const attachments: AttachmentBuilder[] = [];
+  if (bracketImage) {
+    attachments.push(
+      new AttachmentBuilder(bracketImage, { name: "playoff-bracket.png" }),
+    );
+    championEmbed.setImage("attachment://playoff-bracket.png");
+  }
+
   await lobbyMessage.reply({
-    embeds: [
-      new EmbedBuilder()
-        .setColor(0xf1c40f)
-        .setTitle("🏆🏆🏆 THE CHAMPION 🏆🏆🏆")
-        .setDescription(
-          [
-            `# ${winner.name.toUpperCase()} WINS!`,
-            "",
-            `${winner.ai?.emojis.join(" ") ?? "🏆"} **${winner.creation}**`,
-            "",
-            `> ${winnerDialogue}`,
-            "",
-            "This creation stands last and takes the Clash of Creations crown!",
-          ].join("\n"),
-        )
-        .setFooter({ text: "CLASH OF CREATIONS CHAMPION" }),
-    ],
+    embeds: [championEmbed],
+    files: attachments,
     allowedMentions: { parse: [] },
   });
 }

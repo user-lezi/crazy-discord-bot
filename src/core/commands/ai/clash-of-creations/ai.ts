@@ -25,6 +25,9 @@ export interface CreationBattleResult {
   tie: boolean;
   winner: CreationBattlePlayer | null;
   message: string;
+  round?: number;
+  match?: number;
+  rematch?: boolean;
 }
 
 export interface IClashOfCreationGameCache {
