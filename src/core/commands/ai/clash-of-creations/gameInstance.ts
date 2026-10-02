@@ -20,6 +20,7 @@ import {
   CreationBattleResult,
   IClashOfCreationGameCache,
   battleCreations,
+  checkCreationFairness,
   createBotCreation,
   generateWinnerDialogue,
   getCreationPhraseDetails,
@@ -279,6 +280,15 @@ async function startGame(
     game.players.push(botPlayer);
     client.cacheManager.set(gameCacheKey(game.serverId), game);
     await message.edit({ embeds: [lobbyEmbed(game)] });
+    try {
+      await message.reply({
+        content:
+          "🤖 I joined the game with a creation of my own. Let's see how it fares!",
+        allowedMentions: { parse: [] },
+      });
+    } catch (error) {
+      console.error("Failed to announce the bot joining the game.", error);
+    }
   }
 
   game.status = "imagining";
@@ -397,6 +407,7 @@ async function runImaginationPhase(
 
       player.creation = creation;
       player.imaginationStatus = "processing";
+      collector.resetTimer({ time: IMAGINATION_TIME_MS });
       client.cacheManager.set(gameCacheKey(game.serverId), game);
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       await message.edit({
@@ -405,12 +416,27 @@ async function runImaginationPhase(
       });
 
       try {
+        const fairness = await checkCreationFairness(creation);
+        if (!fairness.fair) {
+          player.creation = null;
+          player.imaginationStatus = "imagining";
+          client.cacheManager.set(gameCacheKey(game.serverId), game);
+          await interaction.editReply({
+            content: `That creation is too unbeatable for a fun matchup. ${fairness.reason} Please try a version that can be challenged.`,
+          });
+          await message.edit({
+            embeds: [imaginationEmbed(game)],
+            components: imaginationComponents(game),
+          });
+          return;
+        }
+
         player.ai = await getCreationPhraseDetails(creation);
       } catch (error) {
         player.creation = null;
         player.imaginationStatus = "imagining";
         client.cacheManager.set(gameCacheKey(game.serverId), game);
-        console.error("Failed to generate creation details.", error);
+        console.error("Failed to validate or analyze creation.", error);
         await interaction.editReply({
           content:
             "I couldn't analyze your creation. Please try submitting it again.",
@@ -555,6 +581,7 @@ async function runImaginationPhase(
     client.cacheManager.set(gameCacheKey(game.serverId), game);
     try {
       await button.showModal(creationModal(game, button.user.id));
+      collector.resetTimer({ time: IMAGINATION_TIME_MS });
     } catch (error) {
       player.imaginationStatus = "waiting";
       client.cacheManager.set(gameCacheKey(game.serverId), game);

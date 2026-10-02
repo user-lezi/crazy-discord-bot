@@ -41,7 +41,7 @@ export interface IClashOfCreationGameCache {
 
 export const CreationPhraseDetails = z.object({
   emojis: z.array(z.string()).min(1).max(3),
-  opinion: z.string().min(1),
+  opinion: z.string().min(1).max(100),
 });
 
 export type CreationPhraseDetailsType = z.infer<typeof CreationPhraseDetails>;
@@ -56,13 +56,37 @@ const WinnerDialogueResponse = z.object({
 
 const CreationBattleResponse = z.object({
   result: z.enum(["player1", "player2", "draw"]),
-  message: z.string().min(1),
+  message: z.string().min(1).max(250),
+});
+
+const CreationFairnessResponse = z.object({
+  fair: z.boolean(),
+  reason: z.string().min(1).max(150),
 });
 
 const NoTieCreationBattleResponse = z.object({
   result: z.enum(["player1", "player2"]),
-  message: z.string().min(1),
+  message: z.string().min(1).max(300),
 });
+
+export type CreationFairnessResult = z.infer<typeof CreationFairnessResponse>;
+
+export async function checkCreationFairness(
+  creation: string,
+): Promise<CreationFairnessResult> {
+  const prompt = getPrompt("coc_creation_fairness.txt", [
+    JSON.stringify(creation),
+  ]);
+  const response = await OllamaService.chatStructured({
+    model: MODEL,
+    messages: [{ role: "user", content: prompt }],
+    think: false,
+    schema: CreationFairnessResponse,
+    options: { temperature: 0.1 },
+  });
+
+  return CreationFairnessResponse.parse(response);
+}
 
 export async function getCreationPhraseDetails(
   creation: string,
@@ -214,9 +238,11 @@ export async function battleCreations(
     });
 
   const prompt = getPrompt(
-    Math.random() < 0.5
-      ? "coc_creation_battle.txt"
-      : "coc_creation_battle_chaos.txt",
+    noTie
+      ? "coc_creation_battle_no_tie.txt"
+      : Math.random() < 0.8
+        ? "coc_creation_battle.txt"
+        : "coc_creation_battle_chaos.txt",
     [
       JSON.stringify(player1),
       JSON.stringify(player2),
