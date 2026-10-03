@@ -1,12 +1,12 @@
 import {
   ActionRowBuilder,
+  AttachmentBuilder,
   ButtonBuilder,
   ButtonInteraction,
   ButtonStyle,
   ChatInputCommandInteraction,
   Client,
   ComponentType,
-  AttachmentBuilder,
   EmbedBuilder,
   Interaction,
   InteractionCollector,
@@ -27,10 +27,10 @@ import {
   getCreationPhraseDetails,
 } from "./ai";
 
+import { createPlayoffCanvas } from "./canvas";
 import creationData from "../../../../../assets/data/coc-random-creations.json";
 import { randomUUID } from "node:crypto";
 import { shuffle } from "../../../../util/random";
-import { createPlayoffCanvas } from "./canvas";
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
@@ -705,6 +705,19 @@ async function runPlayoffs(
     }
 
     contenders = shuffle(nextRound);
+    if (contenders.length > 2) {
+      // make it shuffle till the contenders are not in the same order as the previous round to avoid rematches
+      let safe = 1000;
+      while (
+        contenders[contenders.length < 20 ? "some" : "every"](
+          (player, index) => player.id === nextRound[index].id,
+        )
+      ) {
+        contenders = shuffle(nextRound);
+        safe--;
+        if (safe <= 0) break;
+      }
+    }
     round++;
     if (contenders.length > 1) {
       await lobbyMessage.reply({
@@ -734,7 +747,10 @@ async function runPlayoffs(
   try {
     bracketImage = createPlayoffCanvas(game.results, winner);
   } catch (error) {
-    console.error("Failed to render the Clash of Creations playoff bracket.", error);
+    console.error(
+      "Failed to render the Clash of Creations playoff bracket.",
+      error,
+    );
   }
 
   const championEmbed = new EmbedBuilder()

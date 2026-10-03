@@ -242,7 +242,7 @@ export async function battleCreations(
 
   const prompt = getPrompt(
     noTie
-      ? "coc_creation_battle_no_tie.txt"
+      ? "coc_creation_battle_chaos.txt"
       : Math.random() < 0.8
         ? "coc_creation_battle.txt"
         : "coc_creation_battle_chaos.txt",
@@ -261,7 +261,9 @@ export async function battleCreations(
     think: false,
     schema: noTie ? NoTieCreationBattleResponse : CreationBattleResponse,
   });
-  const normalizedResponse = CreationBattleResponse.parse(response);
+  const normalizedResponse = noTie
+    ? NoTieCreationBattleResponse.parse(response)
+    : CreationBattleResponse.parse(response);
   const result = {
     players: [player1, player2],
     tie: normalizedResponse.result === "draw",
