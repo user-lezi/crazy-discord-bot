@@ -1,10 +1,14 @@
 import { Client, Snowflake } from "discord.js";
 
-const Users = [createUser("developer", "910837428862984213")];
+const Users = [
+  createUser(["developer", "special"], "910837428862984213"),
+  createUser(["special"], "903681538842054686"),
+  createUser(["special"], "1421877908456083578"),
+];
 
-export type UserType = "developer" | "placeholder";
+export type UserType = "developer" | "placeholder" | "special";
 
-function createUser(type: UserType, id: Snowflake) {
+function createUser(type: UserType[], id: Snowflake) {
   return {
     type,
     id,

@@ -20,6 +20,7 @@ import {
 
 import { ClientCommands } from "../commands";
 import { Promiseable } from "../util/types";
+import { UserType } from "../users";
 
 export interface ICommandMeta {
   description: string | [short: string, long: string];
@@ -45,7 +46,7 @@ export type CommandRestricter<
   TBuilder extends CommandBuilder = CommandBuilder,
 > =
   | Snowflake
-  | "developers"
+  | UserType[]
   | ((
       this: Client,
       interaction: InteractionForBuilder<TBuilder>,
@@ -55,7 +56,7 @@ export type CommandCooldownBypasser<
   TBuilder extends CommandBuilder = CommandBuilder,
 > =
   | Snowflake
-  | "developers"
+  | UserType[]
   | ((
       this: Client,
       interaction: InteractionForBuilder<TBuilder>,

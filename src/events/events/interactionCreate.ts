@@ -4,6 +4,7 @@ import {
 } from "../../util/interactionReply";
 
 import { Users } from "../../users";
+import { checkUserType } from "../../core/functions/checkUserType";
 import { createEventData } from "../create";
 
 export default createEventData({
@@ -32,12 +33,8 @@ export default createEventData({
           const allowed = (
             await Promise.all(
               command.data.restrictTo.map(async (el) => {
-                if (el == "developers") {
-                  return Users.some(
-                    (u) =>
-                      String(typeof u === "string" ? u : u?.id) ===
-                        interaction.user.id && u.type == "developer",
-                  );
+                if (Array.isArray(el)) {
+                  return checkUserType(interaction, el, "all");
                 } else if (typeof el == "string") {
                   return el == interaction.user.id;
                 } else if (typeof el == "function") {
@@ -64,12 +61,8 @@ export default createEventData({
             bypassCooldown = (
               await Promise.all(
                 command.data.bypassCooldown.map(async (el) => {
-                  if (el == "developers") {
-                    return Users.some(
-                      (u) =>
-                        String(typeof u === "string" ? u : u?.id) ===
-                          interaction.user.id && u.type == "developer",
-                    );
+                  if (Array.isArray(el)) {
+                    return checkUserType(interaction, el, "all");
                   } else if (typeof el == "string") {
                     return el == interaction.user.id;
                   } else if (typeof el == "function") {
