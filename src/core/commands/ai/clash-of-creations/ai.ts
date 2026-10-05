@@ -10,6 +10,7 @@ const DEBUG = false;
 export interface CreationBattlePlayer {
   id: Snowflake;
   name: string;
+  avatarUrl?: string;
   isBot: boolean;
   creation: string | null;
   imaginationStatus:
@@ -30,6 +31,23 @@ export interface CreationBattleResult {
   rematch?: boolean;
 }
 
+export interface CreationPlayoffMatch {
+  number: number;
+  players: [CreationBattlePlayer, CreationBattlePlayer];
+  winner: CreationBattlePlayer | null;
+  tie: boolean;
+}
+
+export interface CreationPlayoffBye {
+  player: CreationBattlePlayer;
+}
+
+export interface CreationPlayoffRound {
+  round: number;
+  matches: CreationPlayoffMatch[];
+  byes: CreationPlayoffBye[];
+}
+
 export interface IClashOfCreationGameCache {
   id: string;
   serverId: Snowflake;
@@ -40,6 +58,7 @@ export interface IClashOfCreationGameCache {
   pingedImaginePlayers: Snowflake[];
   location: [channel: Snowflake, message: Snowflake];
   results: CreationBattleResult[];
+  playoffRounds: CreationPlayoffRound[];
 }
 
 export const CreationPhraseDetails = z.object({
@@ -243,7 +262,7 @@ export async function battleCreations(
   const prompt = getPrompt(
     noTie
       ? "coc_creation_battle_chaos.txt"
-      : Math.random() < 0.8
+      : Math.random() < 0.45
         ? "coc_creation_battle.txt"
         : "coc_creation_battle_chaos.txt",
     [

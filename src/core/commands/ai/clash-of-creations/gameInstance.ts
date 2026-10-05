@@ -16,9 +16,11 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
+import { randomInt, randomUUID } from "node:crypto";
 import {
   CreationBattlePlayer,
   CreationBattleResult,
+  CreationPlayoffRound,
   IClashOfCreationGameCache,
   battleCreations,
   checkCreationFairness,
@@ -29,8 +31,6 @@ import {
 
 import { createPlayoffCanvas } from "./canvas";
 import creationData from "../../../../../assets/data/coc-random-creations.json";
-import { randomUUID } from "node:crypto";
-import { shuffle } from "../../../../util/random";
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
@@ -50,6 +50,46 @@ export function randomCreation(): string {
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function shufflePlayers<T>(players: readonly T[]): T[] {
+  const shuffled = [...players];
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swapIndex = randomInt(index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [
+      shuffled[swapIndex],
+      shuffled[index],
+    ];
+  }
+  return shuffled;
+}
+
+function shuffleForNextRound(
+  players: readonly CreationBattlePlayer[],
+  previousMatches: CreationPlayoffRound["matches"],
+): CreationBattlePlayer[] {
+  const previousPairings = new Set(
+    previousMatches.map(({ players: [first, second] }) =>
+      [first.id, second.id].sort().join(":"),
+    ),
+  );
+  let shuffled = shufflePlayers(players);
+
+  for (let attempt = 0; attempt < 100 && shuffled.length > 2; attempt++) {
+    const repeatsPairing = Array.from(
+      { length: Math.floor(shuffled.length / 2) },
+      (_, index) => {
+        const first = shuffled[index * 2];
+        const second = shuffled[index * 2 + 1];
+        return previousPairings.has([first.id, second.id].sort().join(":"));
+      },
+    ).some(Boolean);
+
+    if (!repeatsPairing) break;
+    shuffled = shufflePlayers(players);
+  }
+
+  return shuffled;
 }
 
 function gameCacheKey(serverId: string): string {
@@ -261,6 +301,7 @@ async function startGame(
     const botPlayer: CreationBattlePlayer = {
       id: client.user.id,
       name: client.user.username,
+      avatarUrl: client.user.displayAvatarURL({ extension: "png", size: 64 }),
       isBot: true,
       creation: botCreation,
       imaginationStatus: "processing",
@@ -639,12 +680,22 @@ async function runPlayoffs(
   lobbyMessage: Message,
 ): Promise<void> {
   let round = 1;
-  let contenders = shuffle([...game.players]);
+  let contenders = shufflePlayers(game.players);
 
   while (contenders.length > 1) {
     const nextRound: CreationBattlePlayer[] = [];
+    const playoffRound: CreationPlayoffRound = {
+      round,
+      matches: [],
+      byes: [],
+    };
+    game.playoffRounds.push(playoffRound);
     const hasBye = contenders.length % 2 === 1;
-    if (hasBye) nextRound.push(contenders[contenders.length - 1]);
+    if (hasBye) {
+      const byePlayer = contenders[contenders.length - 1];
+      nextRound.push(byePlayer);
+      playoffRound.byes.push({ player: byePlayer });
+    }
 
     const pairCount = contenders.length - (hasBye ? 1 : 0);
     for (let index = 0; index < pairCount; index += 2) {
@@ -702,22 +753,16 @@ async function runPlayoffs(
       } else if (result.winner) {
         nextRound.push(result.winner);
       }
+      playoffRound.matches.push({
+        number: index / 2 + 1,
+        players,
+        winner: result.winner,
+        tie: result.tie,
+      });
     }
 
-    contenders = shuffle(nextRound);
-    if (contenders.length > 2) {
-      // make it shuffle till the contenders are not in the same order as the previous round to avoid rematches
-      let safe = 1000;
-      while (
-        contenders[contenders.length < 20 ? "some" : "every"](
-          (player, index) => player.id === nextRound[index].id,
-        )
-      ) {
-        contenders = shuffle(nextRound);
-        safe--;
-        if (safe <= 0) break;
-      }
-    }
+    client.cacheManager.set(gameCacheKey(game.serverId), game);
+    contenders = shuffleForNextRound(nextRound, playoffRound.matches);
     round++;
     if (contenders.length > 1) {
       await lobbyMessage.reply({
@@ -745,7 +790,7 @@ async function runPlayoffs(
 
   let bracketImage: Buffer | undefined;
   try {
-    bracketImage = createPlayoffCanvas(game.results, winner);
+    bracketImage = await createPlayoffCanvas(game.playoffRounds, winner);
   } catch (error) {
     console.error(
       "Failed to render the Clash of Creations playoff bracket.",
@@ -881,6 +926,10 @@ export async function createGameInstance(
       {
         id: interaction.user.id,
         name: interaction.user.username,
+        avatarUrl: interaction.user.displayAvatarURL({
+          extension: "png",
+          size: 64,
+        }),
         isBot: false,
         creation: null,
         imaginationStatus: "waiting",
@@ -889,6 +938,7 @@ export async function createGameInstance(
     ],
     location: [interaction.channelId, interaction.id],
     results: [],
+    playoffRounds: [],
   };
 
   client.cacheManager.set(gameCacheKey(serverId), game);
@@ -954,6 +1004,7 @@ export async function createGameInstance(
       const player: CreationBattlePlayer = {
         id: button.user.id,
         name: button.user.username,
+        avatarUrl: button.user.displayAvatarURL({ extension: "png", size: 64 }),
         isBot: false,
         creation: null,
         imaginationStatus: "waiting",
