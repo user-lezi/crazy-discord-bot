@@ -1,4 +1,7 @@
-import { Client, Collection, GatewayIntentBits } from "discord.js";
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
+import { GlobalFonts } from "@napi-rs/canvas";
+import { Client, GatewayIntentBits } from "discord.js";
 
 import { CacheManager } from "./managers/CacheManager";
 import { CommandManager } from "./managers/CommandManager";
@@ -26,6 +29,33 @@ declare module "discord.js" {
 
 config({ quiet: true });
 
+function registerFonts(directory: string): void {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      registerFonts(path);
+    } else if (entry.isFile() && /\.(ttf|otf)$/i.test(entry.name)) {
+      if (!GlobalFonts.registerFromPath(path)) {
+        throw new Error(`Failed to register font: ${path}`);
+      }
+    }
+  }
+}
+
+const existingFontFamilies = new Set(
+  GlobalFonts.families.map((font) => font.family),
+);
+registerFonts(join(process.cwd(), "assets", "fonts"));
+const registeredFonts = GlobalFonts.families
+  .map((font) => font.family)
+  .filter((family) => !existingFontFamilies.has(family))
+  .sort((a, b) => a.localeCompare(b));
+console.info(
+  `Loaded custom fonts (${registeredFonts.length} families):\n${registeredFonts
+    .map((font) => `  - ${font}`)
+    .join("\n")}`,
+);
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -51,6 +81,7 @@ async function start() {
 
     client.login(process.env.BotToken);
   } catch (error) {
+    console.error("Failed to start bot.", error);
     process.exit(1);
   }
 }

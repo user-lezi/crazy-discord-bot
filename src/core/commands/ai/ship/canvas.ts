@@ -1,13 +1,21 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import type { Client } from "discord.js";
 
+import { extractImageAccent, type RGBColor } from "../../../functions/canvas";
 import type { ShipResult } from "./ai";
 
-const WIDTH = 1000;
-const HEIGHT = 500;
-const AVATAR_SIZE = 164;
+const WIDTH = 1200;
+const HEIGHT = 360;
+const AVATAR_SIZE = 250;
+const CENTER_Y = HEIGHT / 2;
+const LEFT_CENTER_X = 220;
+const RIGHT_CENTER_X = WIDTH - LEFT_CENTER_X;
+const HEART_SCALE = 2.9;
+const HEART_PATH_CENTER_Y = -9;
 
 type CanvasContext = ReturnType<ReturnType<typeof createCanvas>["getContext"]>;
+type CanvasImage = Awaited<ReturnType<typeof loadImage>>;
+type AccentColor = RGBColor;
 
 function roundedRect(
   context: CanvasContext,
@@ -21,33 +29,170 @@ function roundedRect(
   context.roundRect(x, y, width, height, radius);
 }
 
-function drawAvatar(
-  context: CanvasContext,
-  image: Awaited<ReturnType<typeof loadImage>>,
-  x: number,
-  y: number,
-): void {
-  context.save();
-  context.shadowColor = "rgba(255, 105, 180, 0.48)";
-  context.shadowBlur = 28;
-  context.beginPath();
-  context.arc(x + AVATAR_SIZE / 2, y + AVATAR_SIZE / 2, AVATAR_SIZE / 2 + 5, 0, Math.PI * 2);
-  context.fillStyle = "#ff8fbd";
-  context.fill();
-  context.restore();
+function rgba(color: AccentColor, alpha: number): string {
+  return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
+}
 
+function createRandom(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function drawAccentGradient(
+  context: CanvasContext,
+  first: AccentColor,
+  second: AccentColor,
+): void {
+  const gradient = context.createLinearGradient(0, 0, WIDTH, HEIGHT);
+  gradient.addColorStop(0, rgba(first, 0.45));
+  gradient.addColorStop(0.5, "#08090f");
+  gradient.addColorStop(1, rgba(second, 0.45));
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, WIDTH, HEIGHT);
+
+  const firstGlow = context.createRadialGradient(190, 150, 0, 190, 150, 520);
+  firstGlow.addColorStop(0, rgba(first, 0.42));
+  firstGlow.addColorStop(1, rgba(first, 0));
+  context.fillStyle = firstGlow;
+  context.fillRect(0, 0, WIDTH, HEIGHT);
+
+  const secondGlow = context.createRadialGradient(
+    WIDTH - 190,
+    210,
+    0,
+    WIDTH - 190,
+    210,
+    520,
+  );
+  secondGlow.addColorStop(0, rgba(second, 0.38));
+  secondGlow.addColorStop(1, rgba(second, 0));
+  context.fillStyle = secondGlow;
+  context.fillRect(0, 0, WIDTH, HEIGHT);
+}
+
+function drawGrid(
+  context: CanvasContext,
+  first: AccentColor,
+  second: AccentColor,
+): void {
+  drawAccentGradient(context, first, second);
   context.save();
-  context.beginPath();
-  context.arc(x + AVATAR_SIZE / 2, y + AVATAR_SIZE / 2, AVATAR_SIZE / 2, 0, Math.PI * 2);
-  context.clip();
-  context.drawImage(image, x, y, AVATAR_SIZE, AVATAR_SIZE);
+  context.lineWidth = 1;
+  for (let x = 0; x <= WIDTH; x += 36) {
+    context.strokeStyle = rgba(x < WIDTH / 2 ? first : second, 0.18);
+    context.beginPath();
+    context.moveTo(x + 0.5, 0);
+    context.lineTo(x + 0.5, HEIGHT);
+    context.stroke();
+  }
+  for (let y = 0; y <= HEIGHT; y += 36) {
+    context.strokeStyle = rgba(y < CENTER_Y ? first : second, 0.15);
+    context.beginPath();
+    context.moveTo(0, y + 0.5);
+    context.lineTo(WIDTH, y + 0.5);
+    context.stroke();
+  }
   context.restore();
 }
 
-function drawHeart(context: CanvasContext, x: number, y: number): void {
+function drawPixelGradient(
+  context: CanvasContext,
+  first: AccentColor,
+  second: AccentColor,
+  random: () => number,
+): void {
+  const columns = 60;
+  const rows = 18;
+  const pixelCanvas = createCanvas(columns, rows);
+  const pixelContext = pixelCanvas.getContext("2d");
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < columns; x++) {
+      const mix = Math.max(
+        0,
+        Math.min(1, (x / (columns - 1)) * 0.72 + (y / (rows - 1)) * 0.28),
+      );
+      const variation = (random() - 0.5) * 42;
+      const color: AccentColor = [
+        Math.round(
+          Math.max(
+            0,
+            Math.min(255, first[0] * (1 - mix) + second[0] * mix + variation),
+          ),
+        ),
+        Math.round(
+          Math.max(
+            0,
+            Math.min(255, first[1] * (1 - mix) + second[1] * mix + variation),
+          ),
+        ),
+        Math.round(
+          Math.max(
+            0,
+            Math.min(255, first[2] * (1 - mix) + second[2] * mix + variation),
+          ),
+        ),
+      ];
+      pixelContext.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+      pixelContext.fillRect(x, y, 1, 1);
+    }
+  }
+
+  context.fillStyle = "#05060b";
+  context.fillRect(0, 0, WIDTH, HEIGHT);
   context.save();
-  context.translate(x, y);
-  context.scale(1.6, 1.6);
+  context.globalAlpha = 0.62;
+  context.imageSmoothingEnabled = false;
+  context.drawImage(pixelCanvas, 0, 0, WIDTH, HEIGHT);
+  context.restore();
+}
+
+function drawGalaxy(
+  context: CanvasContext,
+  first: AccentColor,
+  second: AccentColor,
+  random: () => number,
+): void {
+  context.fillStyle = "#03040a";
+  context.fillRect(0, 0, WIDTH, HEIGHT);
+
+  for (let index = 0; index < 5; index++) {
+    const color = index % 2 === 0 ? first : second;
+    const x = random() * WIDTH;
+    const y = random() * HEIGHT;
+    const radius = 180 + random() * 260;
+    const glow = context.createRadialGradient(x, y, 0, x, y, radius);
+    glow.addColorStop(0, rgba(color, 0.3));
+    glow.addColorStop(1, rgba(color, 0));
+    context.fillStyle = glow;
+    context.fillRect(0, 0, WIDTH, HEIGHT);
+  }
+
+  for (let index = 0; index < 210; index++) {
+    const color = index % 2 === 0 ? first : second;
+    const radius = 0.5 + random() * 1.8;
+    context.beginPath();
+    context.arc(random() * WIDTH, random() * HEIGHT, radius, 0, Math.PI * 2);
+    context.fillStyle = rgba(color, 0.3 + random() * 0.7);
+    context.fill();
+  }
+}
+
+function drawHeart(
+  context: CanvasContext,
+  centerX: number,
+  centerY: number,
+  opacity: number,
+): void {
+  context.save();
+  context.translate(centerX, centerY - HEART_PATH_CENTER_Y * HEART_SCALE);
+  context.scale(HEART_SCALE, HEART_SCALE);
   context.beginPath();
   context.moveTo(0, 24);
   context.bezierCurveTo(-12, 13, -35, -3, -35, -19);
@@ -55,14 +200,44 @@ function drawHeart(context: CanvasContext, x: number, y: number): void {
   context.bezierCurveTo(11, -42, 35, -38, 35, -19);
   context.bezierCurveTo(35, -3, 12, 13, 0, 24);
   context.closePath();
-  context.shadowColor = "rgba(255, 93, 157, 0.8)";
-  context.shadowBlur = 22;
-  context.fillStyle = "#ff6b9d";
+  context.fillStyle = `rgba(0, 0, 0, ${opacity})`;
   context.fill();
   context.restore();
 }
 
-async function cachedAvatar(client: Client, url: string) {
+function drawAvatar(
+  context: CanvasContext,
+  image: CanvasImage,
+  centerX: number,
+  centerY: number,
+  accent: AccentColor,
+): void {
+  const radius = AVATAR_SIZE / 2;
+  context.save();
+  context.beginPath();
+  context.arc(centerX, centerY, radius + 5, 0, Math.PI * 2);
+  context.fillStyle = rgba(accent, 0.9);
+  context.fill();
+  context.lineWidth = 4;
+  context.strokeStyle = "rgba(255, 255, 255, 0.92)";
+  context.stroke();
+  context.restore();
+
+  context.save();
+  context.beginPath();
+  context.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  context.clip();
+  context.drawImage(
+    image,
+    centerX - radius,
+    centerY - radius,
+    AVATAR_SIZE,
+    AVATAR_SIZE,
+  );
+  context.restore();
+}
+
+async function cachedAvatar(client: Client, url: string): Promise<CanvasImage> {
   const cached = client.imageCacheManager.get(url);
   if (cached) return cached;
 
@@ -79,58 +254,58 @@ export async function createShipImage(
   const [firstAvatar, secondAvatar] = await Promise.all(
     avatarUrls.map((url) => cachedAvatar(client, url)),
   );
+  const firstAccent = extractImageAccent(firstAvatar);
+  const secondAccent = extractImageAccent(secondAvatar);
+  const hourBucket = Math.floor(Date.now() / 3_600_000);
+  const random = createRandom(hourBucket);
   const canvas = createCanvas(WIDTH, HEIGHT);
   const context = canvas.getContext("2d");
 
-  const background = context.createLinearGradient(0, 0, WIDTH, HEIGHT);
-  background.addColorStop(0, "#171528");
-  background.addColorStop(0.52, "#30203f");
-  background.addColorStop(1, "#642e58");
-  context.fillStyle = background;
-  context.fillRect(0, 0, WIDTH, HEIGHT);
-
-  context.fillStyle = "rgba(255, 255, 255, 0.035)";
-  for (let x = 25; x < WIDTH; x += 40) {
-    for (let y = 25; y < HEIGHT; y += 40) {
-      context.beginPath();
-      context.arc(x, y, 1.5, 0, Math.PI * 2);
-      context.fill();
-    }
+  switch (new Date().getHours() % 3) {
+    case 0:
+      drawGrid(context, firstAccent, secondAccent);
+      break;
+    case 1:
+      drawPixelGradient(context, firstAccent, secondAccent, random);
+      break;
+    default:
+      drawGalaxy(context, firstAccent, secondAccent, random);
   }
 
-  roundedRect(context, 32, 32, WIDTH - 64, HEIGHT - 64, 28);
-  context.fillStyle = "rgba(18, 15, 32, 0.72)";
+  roundedRect(context, 28, 28, WIDTH - 56, HEIGHT - 56, 34);
+  context.fillStyle = "rgba(8, 9, 14, 0.5)";
   context.fill();
-  context.strokeStyle = "rgba(255, 255, 255, 0.12)";
-  context.lineWidth = 1;
+  context.strokeStyle = "rgba(255, 255, 255, 0.22)";
+  context.lineWidth = 2;
   context.stroke();
 
-  drawAvatar(context, firstAvatar, 176, 118);
-  drawAvatar(context, secondAvatar, WIDTH - 176 - AVATAR_SIZE, 118);
-  drawHeart(context, WIDTH / 2, 196);
+  drawAvatar(context, firstAvatar, LEFT_CENTER_X, CENTER_Y, firstAccent);
+  drawAvatar(context, secondAvatar, RIGHT_CENTER_X, CENTER_Y, secondAccent);
 
+  const heartGlow = context.createRadialGradient(
+    WIDTH / 2,
+    CENTER_Y,
+    0,
+    WIDTH / 2,
+    CENTER_Y,
+    200,
+  );
+  heartGlow.addColorStop(0, "rgba(255, 255, 255, 0.48)");
+  heartGlow.addColorStop(1, "rgba(255, 255, 255, 0)");
+  context.fillStyle = heartGlow;
+  context.fillRect(WIDTH / 2 - 210, CENTER_Y - 210, 420, 420);
+
+  const heartOpacity =
+    0.1 + (Math.max(0, Math.min(100, result.score)) / 100) * 0.9;
+  drawHeart(context, WIDTH / 2, CENTER_Y, heartOpacity);
+
+  context.textAlign = "center";
+  context.textBaseline = "middle";
   context.fillStyle = "#ffffff";
-  context.font = "600 25px sans-serif";
-  context.fillText(result.users[0].user.displayName, 258, 315, 300);
-  context.fillText(result.users[1].user.displayName, WIDTH - 258, 315, 300);
-
-  context.fillStyle = "rgba(255, 255, 255, 0.12)";
-  roundedRect(context, 246, 353, WIDTH - 492, 12, 6);
-  context.fill();
-
-  const progress = (WIDTH - 492) * (result.score / 100);
-  if (progress > 0) {
-    const bar = context.createLinearGradient(246, 0, 246 + progress, 0);
-    bar.addColorStop(0, "#ff6b9d");
-    bar.addColorStop(1, "#ffc0dd");
-    context.fillStyle = bar;
-    roundedRect(context, 246, 353, progress, 12, 6);
-    context.fill();
-  }
-
-  context.fillStyle = "#ffffff";
-  context.font = "bold 54px sans-serif";
-  context.fillText(`${result.score}%`, WIDTH / 2, 421);
+  context.font = '600 58px "Alexandria"';
+  context.shadowColor = "rgba(0, 0, 0, 0.55)";
+  context.shadowBlur = 8;
+  context.fillText(`${result.score}%`, WIDTH / 2, CENTER_Y);
 
   return canvas.toBuffer("image/png");
 }

@@ -8,8 +8,8 @@ import { CreateCommand } from "../create";
 import { createShipResult } from "../../core/commands/ai/ship";
 
 const loadingMessages = [
-  "🧮 Calculating the name-vibe compatibility between **{first}** and **{second}**…",
-  "💞 Comparing **{first}** and **{second}** and finding their shared spark…",
+  "🧮 Comparing account details for **{first}** and **{second}**…",
+  "💞 Measuring the name and account vibes of **{first}** + **{second}**…",
   "✨ Dreaming up a ship name for **{first}** + **{second}**…",
   "🔎 Looking for the perfect blend of **{first}** and **{second}**…",
 ];
@@ -41,7 +41,10 @@ export default CreateCommand({
 
     if (first.id === second.id) {
       await reply(interaction, {
-        content: "You cannot ship a user with themselves.",
+        content:
+          first.id == interaction.user.id
+            ? `self love crazy?`
+            : "You cannot ship a user with themselves.",
         flags: 64,
       });
       return;
@@ -84,19 +87,17 @@ export default CreateCommand({
     const attachment = new AttachmentBuilder(result.image, {
       name: "ship.png",
     });
+    const shipEmojis = result.emojis.length ? ` ${result.emojis.join("")}` : "";
     const embed = new EmbedBuilder()
       .setColor(0xeb6fa5)
-      .setTitle(`${result.emojis.join("")} ${result.name}`.trim())
-      .setDescription(
-        [`**${result.score}% compatibility**`, result.opinion].join("\n\n"),
-      )
-      .setImage("attachment://ship.png")
-      .setFooter({
-        text: "Compatibility is estimated from name embeddings, just for fun.",
-      });
+      .setDescription(result.opinion)
+      .setImage("attachment://ship.png");
 
     await reply(interaction, {
-      content: "",
+      content: [
+        `❤️ | The name of the ship is **${result.name}**${shipEmojis}`,
+        `❤️ | The compatibility is **${result.score}%**`,
+      ].join("\n"),
       embeds: [embed],
       files: [attachment],
     });

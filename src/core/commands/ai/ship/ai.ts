@@ -11,13 +11,26 @@ export interface ShipUser {
 }
 
 export interface ShipUserProfile {
-  profile: string;
+  profile: {
+    username: string;
+    displayName: string;
+    isBot: boolean;
+    accountCreatedAt: string;
+    accountAgeDays: number;
+  };
   user: ShipUser;
+}
+
+export interface ShipScoreFactorResult {
+  name: string;
+  weight: number;
+  score: number;
 }
 
 export interface ShipResult {
   users: [ShipUserProfile, ShipUserProfile];
   score: number;
+  factors: ShipScoreFactorResult[];
 }
 
 const ShipOpinionResponse = z.object({
