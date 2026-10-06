@@ -18,18 +18,22 @@
     "build": "npm run clean && esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=bot.js --minify --packages=external --legal-comments=none --tree-shaking=true --analyze && npm run compress",
     "compress": "node scripts/uglify.js",
     "bot": "npm run build && node .",
-    "clean": "node -e \"require('fs').rmSync('bot.js',{force:true})\""
+    "clean": "node -e \"require('fs').rmSync('bot.js',{force:true})\"",
+    "zip": "node scripts/zip.js"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.9",
     "@types/node": "^26.1.1",
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
-    "esbuild": "^0.28.1",
     "ollama": "^0.6.4",
-    "prettier": "^3.9.6",
-    "typescript": "^7.0.2",
-    "uglify-js": "^3.19.3",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "adm-zip": "^0.6.1",
+    "esbuild": "^0.28.2",
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2",
+    "uglify-js": "^3.19.3"
   }
 }
